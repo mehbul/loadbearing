@@ -32,8 +32,8 @@ here:
 |------|-------|
 | 1.1 | SELECT * (raw SQL or .select with a star) |
 | 1.2 | Unbounded query (no .range / .limit / .single) |
-| 1.4 | Database query inside a loop (N+1) |
-| 2.2 | fetch() with no timeout |
+| 1.4 | DB query or data-helper call inside a loop (N+1) |
+| 2.2 | external fetch() with no timeout |
 
 ### Skills
 | Skill | Use it when |

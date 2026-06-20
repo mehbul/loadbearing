@@ -36,9 +36,8 @@ function balanced(text, openIdx) {
   return text.slice(openIdx);
 }
 
-// Extract a method-chain expression starting at `start`. Stops at the first ';'
-// or at a newline whose next non-space char is not a chain continuation ('.').
-// This keeps semicolon-free (e.g. TS) statements from bleeding into later code.
+// A method-chain expression starting at `start`. Stops at the first ';' or at a
+// newline whose next non-space char is not a chain continuation ('.').
 function statementFrom(text, start) {
   const max = Math.min(text.length, start + 600);
   let i = start;
@@ -54,7 +53,10 @@ function statementFrom(text, start) {
   return text.slice(start, i);
 }
 
-const QUERY_IN_LOOP = /\bawait\b[^;\n]*?(supabase|\.from\s*\(|prisma\.|drizzle|db\.query|\.query\s*\(|knex)/;
+// A *direct* DB query awaited inside the body (high confidence N+1).
+const DIRECT_QUERY = /\bawait\b[^;\n]*?(supabase|\.from\s*\(|prisma\.|drizzle|db\.query|\.query\s*\(|knex)/;
+// An awaited *data-ish* helper call (read-oriented) inside the body (possible N+1).
+const DATA_CALL = /\bawait\s+(?:[\w$]+\.)*(get|fetch|load|find|query|select|read|list|count|lookup)\w*\s*\(/i;
 
 // Rule 1.1 — SELECT * / .select('*')
 function selectStar(text) {
@@ -75,7 +77,7 @@ function selectStar(text) {
   return out;
 }
 
-// Rule 1.4 — database query inside a loop (N+1)
+// Rule 1.4 — database query inside a loop (N+1), direct or via a helper call
 function queryInLoop(text) {
   const out = [];
   const re = /\b(for|while)\b\s*\(|\.(map|forEach|filter|reduce)\s*\(/g;
@@ -94,7 +96,8 @@ function queryInLoop(text) {
       if (brace === -1 || brace - afterHeader > 4) continue;
       body = balanced(text, brace);
     }
-    if (body && QUERY_IN_LOOP.test(body)) {
+    if (!body) continue;
+    if (DIRECT_QUERY.test(body)) {
       out.push({
         rule: '1.4',
         line: lineOf(text, m.index),
@@ -102,12 +105,20 @@ function queryInLoop(text) {
         why: 'One query per item means many round-trips; under load they multiply and exhaust the DB connection pool.',
         fix: 'Fetch related rows in one query — a join, .in([...ids]), or a Supabase nested select.'
       });
+    } else if (DATA_CALL.test(body)) {
+      out.push({
+        rule: '1.4',
+        line: lineOf(text, m.index),
+        title: 'Possible N+1 — a data call runs inside a loop',
+        why: 'A fetch/get/find call runs once per item; if it hits the DB or network, those round-trips multiply under load. Verify it is not querying per iteration.',
+        fix: 'If it fetches data, batch it before the loop (one query with .in([...ids]) or a join) instead of calling per item.'
+      });
     }
   }
   return out;
 }
 
-// Rules 2.1 / 2.2 — fetch() with no timeout
+// Rules 2.1 / 2.2 — external fetch() with no timeout (relative/internal URLs are skipped to cut noise)
 function fetchNoTimeout(text) {
   const out = [];
   const re = /\bfetch\s*\(/g;
@@ -115,11 +126,13 @@ function fetchNoTimeout(text) {
   while ((m = re.exec(text))) {
     const open = m.index + m[0].length - 1;
     const args = balanced(text, open);
-    if (!/(signal\s*:|AbortSignal|timeout|AbortController)/i.test(args)) {
+    const hasTimeout = /(signal\s*:|AbortSignal|timeout|AbortController)/i.test(args);
+    const isExternal = /https?:\/\//i.test(args); // only flag clearly external calls
+    if (isExternal && !hasTimeout) {
       out.push({
         rule: '2.2',
         line: lineOf(text, m.index),
-        title: 'fetch() without a timeout',
+        title: 'External fetch() without a timeout',
         why: 'A hanging external call ties up a worker; under load one slow dependency can freeze your whole app.',
         fix: 'Add a timeout, e.g. fetch(url, { signal: AbortSignal.timeout(3000) }).'
       });

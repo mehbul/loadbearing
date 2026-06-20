@@ -4,7 +4,7 @@
 
 # Loadbearing
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE) [![Works with any AI agent](https://img.shields.io/badge/works%20with-any%20AI%20agent-8A2BE2.svg)](AGENTS.md) [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md) ![Node.js required](https://img.shields.io/badge/Node.js-required-339933.svg?logo=node.js&logoColor=white)
+[![CI](https://github.com/mehbul/loadbearing/actions/workflows/ci.yml/badge.svg)](https://github.com/mehbul/loadbearing/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE) [![Works with any AI agent](https://img.shields.io/badge/works%20with-any%20AI%20agent-8A2BE2.svg)](AGENTS.md) [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md) ![Node.js required](https://img.shields.io/badge/Node.js-required-339933.svg?logo=node.js&logoColor=white)
 
 > **Will your AI-built app survive real traffic?** Loadbearing catches the slow patterns *as you write them* and load-tests what you ship — honestly.
 
@@ -128,6 +128,35 @@ k6 run -e TARGET_URL=http://localhost:3000/fast skills/run-load-test/scripts/loa
 # should FAIL (endpoint sleeps 800ms > 500ms p95 target):
 k6 run -e TARGET_URL="http://localhost:3000/slow?ms=800" -e P95_MS=500 skills/run-load-test/scripts/load-test.js
 ```
+
+---
+
+## See it catch a real bug
+
+A typical AI-generated route that *looks* fine but isn't:
+
+```ts
+export async function GET() {
+  const { data: orders } = await supabase.from('orders').select('*')        // every column, every row
+  for (const order of orders ?? []) {
+    const u = await supabase.from('users').select('id').eq('id', order.user_id).single()  // a query PER order
+  }
+  const fx = await fetch('https://api.example.com/rates')                   // external call, no timeout
+}
+```
+
+```text
+$ node hooks/perf-scan.js app/api/orders/route.ts
+  [Rule 1.1]  line 2  -  SELECT * fetches every column
+  [Rule 1.2]  line 2  -  Unbounded query (no limit or pagination)
+  [Rule 1.4]  line 3  -  Database query inside a loop (N+1)
+  [Rule 2.2]  line 6  -  External fetch() without a timeout
+```
+
+Four real scaling bugs, flagged the moment the code is written — each with a
+plain-language "why it hurts at scale" and a fix. And it stays **quiet on the good
+version** (paginated, specific columns, a batched query, internal calls), so it
+doesn't become noise you switch off.
 
 ---
 
