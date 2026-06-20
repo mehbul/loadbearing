@@ -1,0 +1,12 @@
+{
+  "name": "loadbearing",
+  "owner": { "name": "Mehbul Islam" },
+  "plugins": [
+    {
+      "name": "loadbearing",
+      "source": "./",
+      "description": "Performance-engineering pack for AI-built apps: write-time prevention (rules + hooks) plus load-test verification (skills + k6). Finds limits; does not guarantee invincibility.",
+      "version": "0.1.0"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "name": "loadbearing",
+  "version": "0.1.0",
+  "description": "Performance-engineering pack for AI-built apps. Catches slow patterns at write-time (rules + hooks) and verifies behavior under load (skills + k6). Finds limits — it does not guarantee invincibility.",
+  "author": {
+    "name": "Mehbul Islam",
+    "email": "mehbulislam81@gmail.com"
+  },
+  "license": "MIT",
+  "keywords": [
+    "performance",
+    "performance-engineering",
+    "load-testing",
+    "k6",
+    "scalability",
+    "p95-latency",
+    "n+1-query",
+    "nextjs",
+    "supabase",
+    "postgres"
+  ]
+}

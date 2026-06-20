@@ -1,0 +1,8 @@
+{
+  "name": "loadbearing-hooks",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "description": "Write-time performance detectors for loadbearing.",
+  "scripts": { "test": "node test/run-tests.js" }
+}

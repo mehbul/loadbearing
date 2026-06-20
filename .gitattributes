@@ -1,0 +1,11 @@
+# Normalize line endings: store text as LF in the repo, check out native.
+# Keeps diffs clean for contributors on macOS/Linux/Windows.
+* text=auto eol=lf
+
+# Treat common binaries as binary (never normalize).
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.pdf  binary

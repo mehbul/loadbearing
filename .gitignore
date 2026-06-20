@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Load-test output
+*.k6-summary.json
+load-test-results/
+results/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
